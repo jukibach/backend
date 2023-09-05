@@ -12,7 +12,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.OK;
 
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping("/api/products-command")
 public class ProductCommandController {
 
     @Autowired

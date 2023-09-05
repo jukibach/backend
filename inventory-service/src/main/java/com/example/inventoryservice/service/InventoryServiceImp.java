@@ -7,8 +7,8 @@ import com.example.inventoryservice.entity.Product;
 import com.example.inventoryservice.repository.InventoryRepository;
 import com.example.inventoryservice.response.CommandInventoryResponse;
 import com.example.inventoryservice.response.InventoryResponse;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -32,13 +32,13 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @Service
 public class InventoryServiceImp implements InventoryService {
 
+    private final String serverTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
     @Autowired
     InventoryRepository inventoryRepository;
-
     @Autowired
     WebClient.Builder webClientBuilder;
-
-    private final String serverTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
+    @Autowired
+    private ObservationRegistry observationRegistry;
 
     @Override
     public List<InventoryResponse> getInventories(int pageIndex, int pageSize, String sortBy, String sortOrder) {
@@ -86,26 +86,39 @@ public class InventoryServiceImp implements InventoryService {
 
     @Override
     @Transactional
-    public CommandInventoryResponse createInventory(InventoryRequest request) throws IllegalAccessException {
-        Optional<Product> product = Optional.ofNullable(getProductBySerialNumber(request.getSkuCode()));
-        if(product.isEmpty()) {
-            return null;
-        }
-        Inventory inventory = new Inventory();
-        inventory.setSkuCode(request.getSkuCode());
-        inventory.setQuantity(request.getQuantity());
-        inventory.setCreatedDate(new Date());
-        List<ErrorMessage> errors = checkFields(inventory);
-        Optional<Inventory> existingInventory = Optional.ofNullable(getInventoryBySKUCode(inventory.getSkuCode()));
-        if(existingInventory.isPresent()) {
-            ErrorMessage errorMessage = new ErrorMessage(BAD_REQUEST, "Duplicate SKU Code", serverTime);
-            errors.add(errorMessage);
-        }
-        if(errors.size() > 0) {
-            return new CommandInventoryResponse(errors);
-        }
-        Inventory result = inventoryRepository.save(inventory);
-        return new CommandInventoryResponse(result);
+    public CommandInventoryResponse createInventory(InventoryRequest request) {
+        Observation serviceObservation = Observation
+                .createNotStarted("products-query-service-lookup", this.observationRegistry)
+                .lowCardinalityKeyValue("http.url", "/api/products-query/serialNumbers/{serialNumber}")
+                .highCardinalityKeyValue("http.full-url", "/api/products-query/serialNumbers/" + request.getSkuCode());
+
+        return serviceObservation.observe(() -> {
+            Optional<Product> product = Optional.ofNullable(getProductBySerialNumber(request.getSkuCode()));
+            if(product.isEmpty()) {
+                return null;
+            }
+            Inventory inventory = new Inventory();
+            inventory.setSkuCode(request.getSkuCode());
+            inventory.setQuantity(request.getQuantity());
+            inventory.setCreatedDate(new Date());
+            List<ErrorMessage> errors;
+            try {
+                errors = checkFields(inventory);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+            Optional<Inventory> existingInventory = Optional.ofNullable(getInventoryBySKUCode(inventory.getSkuCode()));
+            if(existingInventory.isPresent()) {
+                ErrorMessage errorMessage = new ErrorMessage(BAD_REQUEST, "Duplicate SKU Code", serverTime);
+                errors.add(errorMessage);
+            }
+            if(errors.size() > 0) {
+                return new CommandInventoryResponse(errors);
+            }
+            Inventory result = inventoryRepository.save(inventory);
+            return new CommandInventoryResponse(result);
+        });
+
     }
 
     @Override
@@ -152,7 +165,7 @@ public class InventoryServiceImp implements InventoryService {
         return webClientBuilder
                 .build()
                 .get()
-                .uri("http://product-query-service/api/products/serialNumbers/{serialNumber}", serialNumber)
+                .uri("http://product-query-service/api/products-query/serialNumbers/{serialNumber}", serialNumber)
                 .retrieve()
                 .bodyToMono(Product.class)
                 .block();

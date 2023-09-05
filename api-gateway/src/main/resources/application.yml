@@ -1,0 +1,50 @@
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka
+server:
+  port: 8080
+logging:
+  level:
+    org:
+      springframework:
+        cloud:
+          gateway: TRACE
+          gateway.route.RouteDefinitionRouteLocator: INFO
+    root: INFO
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: product-command-service
+          predicates:
+            - Path=/api/products-command/**
+          uri: lb://product-command-service
+        - id: product-query-service
+          predicates:
+            - Path=/api/products-query/**
+          uri: lb://product-query-service
+        - id: inventory-service
+          predicates:
+            - Path=/api/inventories/**
+          uri: lb://inventory-service
+        - id: discovery-server
+          predicates:
+            - Path=/eureka/web
+          uri: http://localhost:8761
+          filters: SetPath=/
+        - id: discovery-server-static
+          predicates:
+            - Path=/eureka/**
+          uri: http://localhost:8761
+  main:
+    web-application-type: reactive
+management:
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 1.0
