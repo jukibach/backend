@@ -22,19 +22,34 @@ spring:
           predicates:
             - Path=/api/products-command/**
           uri: lb://product-command-service
+          filters:
+            - AuthenticationFilter
+
         - id: product-query-service
           predicates:
             - Path=/api/products-query/**
           uri: lb://product-query-service
+          filters:
+            - AuthenticationFilter
+
         - id: inventory-service
           predicates:
             - Path=/api/inventories/**
           uri: lb://inventory-service
+          filters:
+            - AuthenticationFilter
+
+        - id: identity-service
+          predicates:
+            - Path=/api/auth/**
+          uri: lb://identity-service
+
         - id: discovery-server
           predicates:
             - Path=/eureka/web
           uri: http://localhost:8761
           filters: SetPath=/
+
         - id: discovery-server-static
           predicates:
             - Path=/eureka/**
