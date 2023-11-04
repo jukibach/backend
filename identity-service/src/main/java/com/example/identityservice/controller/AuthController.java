@@ -47,6 +47,11 @@ public class AuthController {
         return service.validateToken(token);
     }
 
+    @PostMapping("/resending-token")
+    public ResponseEntity<Object> resendVerificationToken(@NotBlank @RequestParam String email) {
+        return service.resendVerificationToken(email);
+    }
+
     @GetMapping("/users")
     public ResponseEntity<Object> showUserWithPagination(
             @RequestParam(defaultValue = "0") int pageIndex,
