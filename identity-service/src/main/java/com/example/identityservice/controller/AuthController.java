@@ -2,6 +2,8 @@ package com.example.identityservice.controller;
 
 import com.example.identityservice.dto.AuthRequest;
 import com.example.identityservice.dto.RegisterRequest;
+import com.example.identityservice.dto.UserDTO;
+import com.example.identityservice.response.MessageResponse;
 import com.example.identityservice.service.interfaces.AuthService;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;

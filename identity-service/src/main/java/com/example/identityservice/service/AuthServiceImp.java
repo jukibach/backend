@@ -1,13 +1,13 @@
 package com.example.identityservice.service;
 
 import com.example.identityservice.config.CustomUserDetails;
-import com.example.identityservice.dto.JwtResponse;
-import com.example.identityservice.dto.RegisterRequest;
-import com.example.identityservice.dto.ShowUsersResponse;
-import com.example.identityservice.dto.UserDTO;
+import com.example.identityservice.dto.*;
+import com.example.identityservice.entity.PasswordResetToken;
 import com.example.identityservice.entity.User;
 import com.example.identityservice.entity.VerificationToken;
+import com.example.identityservice.event.ForgotPasswordEvent;
 import com.example.identityservice.event.VerificationEvent;
+import com.example.identityservice.repository.PasswordResetTokenRepository;
 import com.example.identityservice.repository.UserCredentialRepository;
 import com.example.identityservice.repository.VerificationTokenRepository;
 import com.example.identityservice.response.MessageResponse;
@@ -16,6 +16,7 @@ import jakarta.transaction.Transactional;
 import net.bytebuddy.utility.RandomString;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -26,10 +27,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 @Service
 public class AuthServiceImp implements AuthService {
@@ -39,6 +37,8 @@ public class AuthServiceImp implements AuthService {
     @Autowired
     private VerificationTokenRepository tokenRepository;
 
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
 
@@ -250,6 +250,21 @@ public class AuthServiceImp implements AuthService {
             sb.append(chars[random.nextInt(chars.length)]);
         }
         return sb.toString();
+    }
+
+    @Transactional
+    private VerificationToken generateNewToken(String email) {
+        Optional<User> user = repository.findByEmail(email);
+        if(user.isEmpty()) {
+            return null;
+        }
+        Optional<VerificationToken> token = tokenRepository.findByUserId(user.get().getId());
+        if(token.isEmpty()) {
+            return null;
+        }
+        token.get().updateToken(RandomString.make(64));
+        tokenRepository.save(token.get());
+        return token.get();
     }
 
     @Transactional

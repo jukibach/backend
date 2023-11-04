@@ -1,13 +1,18 @@
 package com.example.identityservice.service.interfaces;
 
+import com.example.identityservice.dto.ForgotPasswordDTO;
 import com.example.identityservice.dto.RegisterRequest;
+import com.example.identityservice.dto.UserDTO;
+import jakarta.transaction.Transactional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
 public interface AuthService {
     public ResponseEntity<Object> saveUser(RegisterRequest request);
 
-    public ResponseEntity<Object> login(Authentication authentication) ;
+    public ResponseEntity<Object> login(Authentication authentication);
+
+    public UserDTO getUserById(String id);
 
     public ResponseEntity<Object> validateToken(String token);
 
