@@ -1,8 +1,9 @@
 package com.example.identityservice.controller;
 
 import com.example.identityservice.dto.AuthRequest;
-import com.example.identityservice.entity.UserCredential;
-import com.example.identityservice.service.AuthService;
+import com.example.identityservice.dto.RegisterRequest;
+import com.example.identityservice.service.interfaces.AuthService;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,7 +12,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.OK;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -27,22 +27,29 @@ public class AuthController {
         return service.saveUser(request);
     }
 
-    @PostMapping("/token")
-    public ResponseEntity<Object> getToken(@RequestBody AuthRequest authRequest) {
+    @PostMapping("/login")
+    public ResponseEntity<Object> login(@RequestBody AuthRequest authRequest) {
         /* AuthenticationManager: access to the DB -> authenticate via user detail service */
         Authentication
                 authenticate
                 = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.getUsername(), authRequest.getPassword()));
         if(authenticate.isAuthenticated()) {
-            return service.generateToken(authenticate);
+            return service.login(authenticate);
         } else {
             return new ResponseEntity<>(BAD_REQUEST);
         }
     }
 
     @PostMapping("/validate")
-    public String validateToken(@RequestParam("token") String token) {
-        service.validateToken(token);
-        return "Valid token";
+    public ResponseEntity<Object> validateToken(@NotBlank @RequestParam("token") String token) {
+        return service.validateToken(token);
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<Object> showUserWithPagination(
+            @RequestParam(defaultValue = "0") int pageIndex,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(defaultValue = "id") String sortBy, @RequestParam(defaultValue = "asc") String sortOrder) {
+        return service.showUserWithPagination(pageIndex, pageSize, sortBy, sortOrder);
     }
 }
