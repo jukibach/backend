@@ -23,8 +23,8 @@ public class AuthController {
     private AuthenticationManager authenticationManager;
 
     @PostMapping("/register")
-    public ResponseEntity<Object> addNewUser(@RequestBody UserCredential user) {
-        return new ResponseEntity<>(service.saveUser(user), OK);
+    public ResponseEntity<Object> addNewUser(@RequestBody RegisterRequest request) {
+        return service.saveUser(request);
     }
 
     @PostMapping("/token")

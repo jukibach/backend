@@ -1,6 +1,6 @@
 package com.example.identityservice.config;
 
-import com.example.identityservice.entity.UserCredential;
+import com.example.identityservice.entity.User;
 import com.example.identityservice.repository.UserCredentialRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,7 +17,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Optional<UserCredential> user = repository.findByName(username);
+        Optional<User> user = repository.findByUserName(username);
         return user.map(CustomUserDetails::new).orElseThrow(null);
     }
 }

@@ -1,6 +1,6 @@
 package com.example.identityservice.config;
 
-import com.example.identityservice.entity.UserCredential;
+import com.example.identityservice.entity.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -8,10 +8,10 @@ import java.util.Collection;
 
 public class CustomUserDetails implements UserDetails {
 
-    private final UserCredential userCredential;
+    private final User user;
 
-    public CustomUserDetails(UserCredential userCredential) {
-        this.userCredential = userCredential;
+    public CustomUserDetails(User user) {
+        this.user = user;
     }
 
     @Override
@@ -21,20 +21,20 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getPassword() {
-        return userCredential.getPassword();
+        return user.getPassword();
     }
 
     @Override
     public String getUsername() {
-        return userCredential.getName();
+        return user.getUserName();
     }
 
     public String getEmail() {
-        return userCredential.getEmail();
+        return user.getEmail();
     }
 
-    public int getId() {
-        return userCredential.getId();
+    public String getId() {
+        return user.getId();
     }
 
     @Override

@@ -1,7 +1,14 @@
+app:
+  client:
+    baseUrl: http://localhost:4200
+
 spring:
   application:
     name: identity-service
-
+  flyway:
+    baseline-on-migrate: true
+    enabled: true
+    validate-on-migrate: false
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     password: 123456789
@@ -15,6 +22,19 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVER:localhost}:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        spring:
+          json:
+            type:
+              mapping: verification:com.example.identityservice.event.VerificationEvent
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    template:
+      default-topic: verificationTopic
+
 
 eureka:
   client:
