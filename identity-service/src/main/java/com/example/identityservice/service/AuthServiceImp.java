@@ -24,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -215,13 +216,42 @@ public class AuthServiceImp implements AuthService {
 
         boolean arePasswordsEqual = Objects.equals(request.getNewPassword(), request.getConfirmPassword());
         if(!arePasswordsEqual) {
-            messageResponse = new MessageResponse("Token was expired!", "EXPIRED");
+            messageResponse = new MessageResponse("New password and confirm password are not equal!", "INVALID");
             return ResponseEntity.badRequest().body(messageResponse);
         }
 
         user.get().setPassword(passwordEncoder.encode(request.getNewPassword()));
         repository.save(user.get());
         passwordResetTokenRepository.delete(token.get());
+        messageResponse = new MessageResponse("Saved successfully", "VALID");
+        return ResponseEntity.ok().body(messageResponse);
+    }
+
+    @Override
+    @Transactional
+    public ResponseEntity<Object> saveResetPassword(ResetPasswordDTO request) {
+        Optional<User> user = repository.findById(request.getUserId());
+        MessageResponse messageResponse;
+        if(user.isEmpty()) {
+            messageResponse = new MessageResponse("User does not exist", "INVALID");
+            return ResponseEntity.badRequest().body(messageResponse);
+        }
+
+
+        boolean isOldPasswordCorrect = BCrypt.checkpw(request.getOldPassword(), user.get().getPassword());
+        if(!isOldPasswordCorrect) {
+            messageResponse = new MessageResponse("Old password is incorrect", "EXPIRED");
+            return ResponseEntity.badRequest().body(messageResponse);
+        }
+
+        boolean arePasswordsEqual = Objects.equals(request.getNewPassword(), request.getConfirmPassword());
+        if(!arePasswordsEqual) {
+            messageResponse = new MessageResponse("New password and confirm password are not equal!", "INVALID");
+            return ResponseEntity.badRequest().body(messageResponse);
+        }
+
+        user.get().setPassword(passwordEncoder.encode(request.getNewPassword()));
+        repository.save(user.get());
         messageResponse = new MessageResponse("Saved successfully", "VALID");
         return ResponseEntity.ok().body(messageResponse);
     }

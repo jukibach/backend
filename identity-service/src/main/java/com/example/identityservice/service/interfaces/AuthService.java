@@ -2,6 +2,7 @@ package com.example.identityservice.service.interfaces;
 
 import com.example.identityservice.dto.ForgotPasswordDTO;
 import com.example.identityservice.dto.RegisterRequest;
+import com.example.identityservice.dto.ResetPasswordDTO;
 import com.example.identityservice.dto.UserDTO;
 import jakarta.transaction.Transactional;
 import org.springframework.http.ResponseEntity;
@@ -18,14 +19,14 @@ public interface AuthService {
 
     public ResponseEntity<Object> resendVerificationToken(String email);
 
-
-    @Transactional
     ResponseEntity<Object> validateForgotPasswordToken(String token);
 
     public ResponseEntity<Object> showUserWithPagination(int pageIndex, int pageSize, String sortBy, String sortOrder);
 
     ResponseEntity<Object> sendResetPasswordEmail(String email);
 
-    @Transactional
     ResponseEntity<Object> saveForgotPassword(ForgotPasswordDTO request);
+
+    ResponseEntity<Object> saveResetPassword(ResetPasswordDTO request);
+
 }
