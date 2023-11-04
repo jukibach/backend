@@ -16,7 +16,7 @@ spring:
             trusted:
               packages: '*'
             type:
-              mapping: verification:com.example.notificationservice.VerificationEvent
+              mapping: verification:com.example.notificationservice.VerificationEvent, forgotpassword:com.example.notificationservice.ForgotPasswordEvent
                 #event:com.example.notificationservice.RequestPlacedEvent
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
     producer:

@@ -51,6 +51,9 @@ public class AuthServiceImp implements AuthService {
     @Autowired
     private KafkaTemplate<String, VerificationEvent> kafkaTemplate;
 
+    @Autowired
+    private KafkaTemplate<String, ForgotPasswordEvent> forgotPasswordEventKafkaTemplate;
+
     @Override
     @Transactional
     public ResponseEntity<Object> saveUser(RegisterRequest request) {
@@ -119,6 +122,26 @@ public class AuthServiceImp implements AuthService {
     }
 
     @Override
+    @Transactional
+    public ResponseEntity<Object> validateForgotPasswordToken(String token) {
+        final Optional<PasswordResetToken> passwordResetToken = passwordResetTokenRepository.findByToken(token);
+        MessageResponse messageResponse;
+        if(passwordResetToken.isEmpty()) {
+            messageResponse
+                    = new MessageResponse("Sorry, we could not verify account. It maybe already verified " + "or verification code is incorrect.", "INVALID");
+            return ResponseEntity.badRequest().body(messageResponse);
+        }
+        Calendar cal = Calendar.getInstance();
+        boolean isTokenExpired = (passwordResetToken.get().getExpiryDate().getTime() - cal.getTime().getTime()) <= 0;
+        if(isTokenExpired) {
+            messageResponse = new MessageResponse("Verification code was expired!", "EXPIRED");
+            return ResponseEntity.badRequest().body(messageResponse);
+        }
+        messageResponse = new MessageResponse("Verified successfully", "VALID");
+        return ResponseEntity.ok().body(messageResponse);
+    }
+
+    @Override
     public ResponseEntity<Object> showUserWithPagination(int pageIndex, int pageSize, String sortBy, String sortOrder) {
         Sort sort = sortOrder.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() : Sort
                 .by(sortBy)
@@ -130,6 +153,93 @@ public class AuthServiceImp implements AuthService {
         response.setSize(pageSize);
         response.setNumber(pageIndex);
         return ResponseEntity.ok(response);
+    }
+
+    @Override
+    @Cacheable(value = "user", key = "#id", unless = "#result == null")
+    public UserDTO getUserById(String id) {
+        Optional<User> user = repository.findById(id);
+        return user.map(UserDTO::new).orElse(null);
+    }
+
+    @Override
+    public ResponseEntity<Object> resendVerificationToken(String email) {
+        VerificationToken token = generateNewToken(email);
+        if(token == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Token does not exist", "INVALID"));
+        }
+        User user = token.getUser();
+        String verifyURL = baseUrl + "/email-verification?token=" + token.getToken();
+        kafkaTemplate.send("verificationTopic", new VerificationEvent(user, verifyURL));
+        return ResponseEntity.ok().body(new MessageResponse("Resent successfully", "VALID"));
+    }
+
+    @Override
+    public ResponseEntity<Object> sendResetPasswordEmail(String email) {
+        String token = RandomString.make(64);
+        Optional<User> user = repository.findByEmail(email);
+        String verifyURL;
+        if(user.isEmpty()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("User does not exist", "INVALID"));
+        }
+
+        Optional<PasswordResetToken> existingToken = passwordResetTokenRepository.findByUserId(user.get().getId());
+        if(existingToken.isPresent()) {
+            String newToken = generateResetPasswordToken(existingToken.get().getToken());
+            verifyURL = baseUrl + "/forgot-password?token=" + newToken;
+        } else {
+            PasswordResetToken myToken = new PasswordResetToken(token, user.get());
+            passwordResetTokenRepository.save(myToken);
+            verifyURL = baseUrl + "/forgot-password?token=" + token;
+        }
+        forgotPasswordEventKafkaTemplate.send("forgotPasswordTopic", new ForgotPasswordEvent(user.get(), verifyURL));
+        return ResponseEntity.ok(new MessageResponse("Sent successfully", "VALID"));
+
+    }
+
+    @Override
+    @Transactional
+    public ResponseEntity<Object> saveForgotPassword(ForgotPasswordDTO request) {
+        Optional<User> user = Optional.ofNullable(findUserByForgotPasswordToken(request.getToken()));
+        MessageResponse messageResponse;
+        if(user.isEmpty()) {
+            messageResponse = new MessageResponse("User does not exist", "INVALID");
+            return ResponseEntity.badRequest().body(messageResponse);
+        }
+
+        Optional<PasswordResetToken> token = passwordResetTokenRepository.findByToken(request.getToken());
+        if(token.isEmpty()) {
+            messageResponse = new MessageResponse("Token does not exist", "INVALID");
+            return ResponseEntity.badRequest().body(messageResponse);
+        }
+
+        boolean arePasswordsEqual = Objects.equals(request.getNewPassword(), request.getConfirmPassword());
+        if(!arePasswordsEqual) {
+            messageResponse = new MessageResponse("Token was expired!", "EXPIRED");
+            return ResponseEntity.badRequest().body(messageResponse);
+        }
+
+        user.get().setPassword(passwordEncoder.encode(request.getNewPassword()));
+        repository.save(user.get());
+        passwordResetTokenRepository.delete(token.get());
+        messageResponse = new MessageResponse("Saved successfully", "VALID");
+        return ResponseEntity.ok().body(messageResponse);
+    }
+
+    private User findUserByForgotPasswordToken(String existingToken) {
+        Optional<PasswordResetToken> token = passwordResetTokenRepository.findByToken(existingToken);
+        return token.map(PasswordResetToken::getUser).orElse(null);
+    }
+
+    @Transactional
+    private String generateResetPasswordToken(String existingToken) {
+        Optional<PasswordResetToken> token = passwordResetTokenRepository.findByToken(existingToken);
+        if(token.isEmpty()) {
+            return null;
+        }
+        token.get().updateToken(RandomString.make(64));
+        token = Optional.of(passwordResetTokenRepository.save(token.get()));
+        return token.get().getToken();
     }
 
     private String generateBadgeId() {

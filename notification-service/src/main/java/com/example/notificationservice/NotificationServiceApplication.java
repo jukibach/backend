@@ -33,4 +33,13 @@ public class NotificationServiceApplication {
 				.writeValueAsString(verificationEvent));
 		emailSenderService.sendVerificationEmail(verificationEvent);
 	}
+
+	@KafkaListener(topics = "forgotPasswordTopic", groupId = "forgotPasswordId", concurrency = "2")
+	public void sendResetPasswordEmail(ForgotPasswordEvent forgotPasswordEvent)
+			throws MessagingException, JsonProcessingException {
+		log.info("Sending Forgot password email {}", objectMapper
+				.writerWithDefaultPrettyPrinter()
+				.writeValueAsString(forgotPasswordEvent));
+		emailSenderService.sendResetPasswordEmail(forgotPasswordEvent);
+	}
 }

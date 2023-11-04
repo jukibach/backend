@@ -52,4 +52,23 @@ public class AuthController {
             @RequestParam(defaultValue = "id") String sortBy, @RequestParam(defaultValue = "asc") String sortOrder) {
         return service.showUserWithPagination(pageIndex, pageSize, sortBy, sortOrder);
     }
+
+    @GetMapping("/users/{id}")
+    public ResponseEntity<Object> getUserById(@PathVariable String id) {
+        UserDTO user = service.getUserById(id);
+        if(user == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("User does not exist! ", "INVALID"));
+        }
+        return ResponseEntity.ok().body(user);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Object> sendResetPasswordEmail(@NotBlank @RequestParam String email) {
+        return service.sendResetPasswordEmail(email);
+    }
+
+    @PostMapping("/forgot-password-validation")
+    public ResponseEntity<Object> validateForgotPasswordToken(@NotBlank @RequestParam("token") String token) {
+        return service.validateToken(token);
+    }
 }

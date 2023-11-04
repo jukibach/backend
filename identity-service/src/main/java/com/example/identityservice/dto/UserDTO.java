@@ -3,8 +3,12 @@ package com.example.identityservice.dto;
 import com.example.identityservice.entity.User;
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class UserDTO {
+public class UserDTO implements Serializable {
+    private String id;
+
     private String badgeId;
 
     private String userName;
@@ -18,6 +22,7 @@ public class UserDTO {
     private String phoneNumber;
 
     public UserDTO(User user) {
+        this.id = user.getId();
         this.badgeId = user.getBadgeId();
         this.userName = user.getUserName();
         this.firstName = user.getFirstName();

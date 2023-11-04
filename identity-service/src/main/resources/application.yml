@@ -3,6 +3,13 @@ app:
     baseUrl: http://localhost:4200
 
 spring:
+  data:
+    redis:
+      host: ${REDIS:localhost}
+      port: 6379
+  cache:
+    redis:
+      time-to-live: 1800000ms
   application:
     name: identity-service
   flyway:
@@ -30,7 +37,7 @@ spring:
         spring:
           json:
             type:
-              mapping: verification:com.example.identityservice.event.VerificationEvent
+              mapping: verification:com.example.identityservice.event.VerificationEvent, forgotpassword:com.example.identityservice.event.ForgotPasswordEvent
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     template:
       default-topic: verificationTopic

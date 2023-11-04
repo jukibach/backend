@@ -11,7 +11,16 @@ public interface AuthService {
 
     public ResponseEntity<Object> validateToken(String token);
 
-    public ResponseEntity<Object> showUserWithPagination(int pageIndex, int pageSize, String sortBy, String sortOrder);
+    public ResponseEntity<Object> resendVerificationToken(String email);
+
+
+    @Transactional
+    ResponseEntity<Object> validateForgotPasswordToken(String token);
 
     public ResponseEntity<Object> showUserWithPagination(int pageIndex, int pageSize, String sortBy, String sortOrder);
+
+    ResponseEntity<Object> sendResetPasswordEmail(String email);
+
+    @Transactional
+    ResponseEntity<Object> saveForgotPassword(ForgotPasswordDTO request);
 }
